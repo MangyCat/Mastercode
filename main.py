@@ -437,20 +437,33 @@ def check_terminal_size(loop=None, data=None):
         last_size = size
     main_loop.set_alarm_in(1, check_terminal_size)
 
-def password_prompt(first_time=False):
+def password_prompt(first_time=False, confirm=False):
     update_header("Password prompt")
     if first_time:
-        prompt_text = "Set master password: "
+        if confirm:
+            prompt_text = "Confirm master password: "
+        else:
+            prompt_text = "Set master password: "
     else:
         prompt_text = "Enter master password: "
     password_edit = urwid.Edit(prompt_text, mask='●')
-    submit_button = styled_button("Submit", lambda button: verify_password(password_edit.get_edit_text(), first_time))
+    submit_button = styled_button("Submit", lambda button: verify_password(password_edit.get_edit_text(), first_time, confirm))
     layout.body = urwid.AttrMap(urwid.Filler(urwid.Pile([password_edit, submit_button])), 'body')
 
-def verify_password(input_password, first_time=False): # imagine if it just had no failsafe, and gave you garbled data on decryption, not willing to test that
+def verify_password(input_password, first_time=False, confirm=False):
+    global master_password
     if first_time:
-        save_master_password(input_password)
-        main_menu()
+        if confirm:
+            if input_password == master_password:
+                save_master_password(input_password)
+                main_menu()
+            else:
+                error_text = urwid.Text("Passwords do not match. Try again.")
+                retry_button = styled_button("Retry", lambda button: password_prompt(first_time=True))
+                layout.body = urwid.AttrMap(urwid.Filler(urwid.Pile([error_text, retry_button])), 'body')
+        else:
+            master_password = input_password
+            password_prompt(first_time=True, confirm=True)
     else:
         if input_password == master_password:
             main_menu()
